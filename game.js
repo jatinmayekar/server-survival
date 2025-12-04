@@ -347,12 +347,17 @@ function snapToGrid(vec) {
 
 function getTrafficType() {
     const dist = STATE.trafficDistribution;
-    const total = dist.WEB + dist.API + dist.FRAUD;
+    let total = 0;
+    for (const key in dist) total += dist[key];
+
     if (total === 0) return TRAFFIC_TYPES.WEB;
-    const r = Math.random() * total;
-    if (r < dist.WEB) return TRAFFIC_TYPES.WEB;
-    if (r < dist.WEB + dist.API) return TRAFFIC_TYPES.API;
-    return TRAFFIC_TYPES.FRAUD;
+    let r = Math.random() * total;
+
+    for (const key in dist) {
+        r -= dist[key];
+        if (r < 0) return key;
+    }
+    return TRAFFIC_TYPES.WEB;
 }
 
 function spawnRequest() {
@@ -388,10 +393,20 @@ function updateScore(req, outcome) {
             STATE.score.api += points.API_SCORE;
             STATE.score.total += points.API_SCORE;
             STATE.money += points.API_REWARD;
+        } else if (req.type === TRAFFIC_TYPES.LOGIN) {
+            STATE.score.total += points.LOGIN_SCORE;
+            STATE.money += points.LOGIN_REWARD;
+        } else if (req.type === TRAFFIC_TYPES.INFERENCE) {
+            STATE.score.total += points.INFERENCE_SCORE;
+            STATE.money += points.INFERENCE_REWARD;
+        } else if (req.type === TRAFFIC_TYPES.HISTORY) {
+            STATE.score.total += points.HISTORY_SCORE;
+            STATE.money += points.HISTORY_REWARD;
         }
     } else if (outcome === 'FAILED') {
         STATE.reputation += points.FAIL_REPUTATION;
-        STATE.score.total -= (req.type === TRAFFIC_TYPES.API ? points.API_SCORE : points.WEB_SCORE) / 2;
+        // Approximate penalty
+        STATE.score.total -= 5;
     }
 
     updateScoreUI();
@@ -508,12 +523,19 @@ function createConnection(fromId, toId) {
     else if (t1 === 'waf' && t2 === 'alb') valid = true;
     else if (t1 === 'waf' && t2 === 'sqs') valid = true;
     else if (t1 === 'sqs' && t2 === 'alb') valid = true;
+    else if (t1 === 'sqs' && t2 === 'auth') valid = true; // SQS -> Auth
     else if (t1 === 'alb' && t2 === 'sqs') valid = true;
     else if (t1 === 'sqs' && t2 === 'compute') valid = true;
     else if (t1 === 'alb' && t2 === 'compute') valid = true;
+    else if (t1 === 'alb' && t2 === 'auth') valid = true; // ALB -> Auth
+    else if (t1 === 'auth' && t2 === 'db') valid = true; // Auth -> DB (Login)
+    else if (t1 === 'auth' && t2 === 'compute') valid = true; // Auth -> Compute (Inference/History)
     else if (t1 === 'compute' && t2 === 'cache') valid = true;
     else if (t1 === 'cache' && (t2 === 'db' || t2 === 's3')) valid = true;
     else if (t1 === 'compute' && (t2 === 'db' || t2 === 's3')) valid = true;
+    else if (t1 === 'compute' && t2 === 'gpu') valid = true; // Compute -> GPU
+    else if (t1 === 'gpu' && t2 === 'vector_db') valid = true; // GPU -> Vector DB
+    else if (t1 === 'vector_db' && t2 === 'db') valid = true; // Vector DB -> DB (optional)
 
     if (!valid) {
         new Audio('assets/sounds/click-9.mp3').play();
@@ -684,9 +706,10 @@ container.addEventListener('mousedown', (e) => {
     const i = getIntersect(e.clientX, e.clientY);
     if (STATE.activeTool === 'select') {
         const i = getIntersect(e.clientX, e.clientY);
-        if (i.type === 'service') { draggedNode = STATE.services.find(s => s.id === i.id); } 
+        if (i.type === 'service') { draggedNode = STATE.services.find(s => s.id === i.id); }
         else if (i.type === 'internet') { draggedNode = STATE.internetNode; }
-        if (draggedNode) { isDraggingNode = true;
+        if (draggedNode) {
+            isDraggingNode = true;
             const hit = getIntersect(e.clientX, e.clientY);
             if (hit.pos) { dragOffset.copy(draggedNode.position).sub(hit.pos); }
             container.style.cursor = 'grabbing';
@@ -706,15 +729,19 @@ container.addEventListener('mousedown', (e) => {
     else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
         if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
         else { STATE.selectedNodeId = i.id; new Audio('assets/sounds/click-5.mp3').play(); }
-    } else if (['waf', 'alb', 'lambda', 'db', 's3', 'sqs', 'cache'].includes(STATE.activeTool)) {
-        // Handle upgrades for compute, db, and cache
+    } else if (['waf', 'alb', 'lambda', 'db', 's3', 'sqs', 'cache', 'auth', 'gpu', 'vector_db'].includes(STATE.activeTool)) {
+        // Handle upgrades for compute, db, cache, gpu, vector_db
         if ((STATE.activeTool === 'lambda' && i.type === 'service') ||
             (STATE.activeTool === 'db' && i.type === 'service') ||
-            (STATE.activeTool === 'cache' && i.type === 'service')) {
+            (STATE.activeTool === 'cache' && i.type === 'service') ||
+            (STATE.activeTool === 'gpu' && i.type === 'service') ||
+            (STATE.activeTool === 'vector_db' && i.type === 'service')) {
             const svc = STATE.services.find(s => s.id === i.id);
             if (svc && ((STATE.activeTool === 'lambda' && svc.type === 'compute') ||
-                        (STATE.activeTool === 'db' && svc.type === 'db') ||
-                        (STATE.activeTool === 'cache' && svc.type === 'cache'))) {
+                (STATE.activeTool === 'db' && svc.type === 'db') ||
+                (STATE.activeTool === 'cache' && svc.type === 'cache') ||
+                (STATE.activeTool === 'gpu' && svc.type === 'gpu') ||
+                (STATE.activeTool === 'vector_db' && svc.type === 'vector_db'))) {
                 svc.upgrade();
                 return;
             }
@@ -727,7 +754,10 @@ container.addEventListener('mousedown', (e) => {
                 'db': 'db',
                 's3': 's3',
                 'sqs': 'sqs',
-                'cache': 'cache'
+                'cache': 'cache',
+                'auth': 'auth',
+                'gpu': 'gpu',
+                'vector_db': 'vector_db'
             };
             createService(typeMap[STATE.activeTool], snapToGrid(i.pos));
         }
@@ -763,21 +793,21 @@ container.addEventListener('mousemove', (e) => {
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
 
-    const panX = -dx * (camera.right - camera.left) / window.innerWidth * panSpeed;
-    const panY = dy * (camera.top - camera.bottom) / window.innerHeight * panSpeed;
+        const panX = -dx * (camera.right - camera.left) / window.innerWidth * panSpeed;
+        const panY = dy * (camera.top - camera.bottom) / window.innerHeight * panSpeed;
 
-    if (isIsometric) {
-        camera.position.x += panX;
-        camera.position.z += panY;
-        cameraTarget.x += panX;
-        cameraTarget.z += panY;
-        camera.lookAt(cameraTarget);
-    } else {
-        camera.position.x += panX;
-        camera.position.z += panY;
-        camera.lookAt(camera.position.x, 0, camera.position.z);
-    }
-    camera.updateProjectionMatrix();        lastMouseX = e.clientX;
+        if (isIsometric) {
+            camera.position.x += panX;
+            camera.position.z += panY;
+            cameraTarget.x += panX;
+            cameraTarget.z += panY;
+            camera.lookAt(cameraTarget);
+        } else {
+            camera.position.x += panX;
+            camera.position.z += panY;
+            camera.lookAt(camera.position.x, 0, camera.position.z);
+        }
+        camera.updateProjectionMatrix(); lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         document.getElementById('tooltip').style.display = 'none';
         return;
@@ -914,6 +944,15 @@ container.addEventListener('mouseup', (e) => {
         return;
     }
 });
+
+container.addEventListener('wheel', (e) => {
+    e.preventDefault();
+
+    const zoomSpeed = 0.001;
+    camera.zoom -= e.deltaY * zoomSpeed;
+    camera.zoom = Math.min(Math.max(0.5, camera.zoom), 2.0);
+    camera.updateProjectionMatrix();
+}, { passive: false });
 
 function updateConnectionsForNode(nodeId) {
     STATE.connections.forEach(c => {
@@ -1117,6 +1156,49 @@ window.spawnBurst = (type) => {
                 failRequest(req);
             }
         }, i * 30);
+    }
+};
+
+window.triggerScenario = (type) => {
+    let trafficType = '';
+    let count = 50;
+    let message = '';
+
+    if (type === 'viral_launch') {
+        trafficType = 'INFERENCE';
+        message = '🚀 VIRAL LAUNCH! 50 Inference Requests Incoming!';
+    } else if (type === 'auth_storm') {
+        trafficType = 'LOGIN';
+        message = '🔐 AUTH STORM! 50 Login Requests Incoming!';
+    } else if (type === 'history_spike') {
+        trafficType = 'HISTORY';
+        message = '📜 HISTORY SPIKE! 50 History Requests Incoming!';
+    }
+
+    if (trafficType) {
+        // Show toast/notification
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg font-bold z-50 animate-bounce';
+        toast.innerText = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+
+        // Spawn burst
+        for (let i = 0; i < count; i++) {
+            setTimeout(() => {
+                const req = new Request(trafficType);
+                STATE.requests.push(req);
+                const conns = STATE.internetNode.connections;
+                if (conns.length > 0) {
+                    const entryNodes = conns.map(id => STATE.services.find(s => s.id === id));
+                    const wafEntry = entryNodes.find(s => s?.type === 'waf');
+                    const target = wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
+                    if (target) req.flyTo(target); else failRequest(req);
+                } else {
+                    failRequest(req);
+                }
+            }, i * 50); // Spread out slightly more than normal burst
+        }
     }
 };
 

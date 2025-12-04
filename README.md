@@ -16,6 +16,9 @@ Survive as long as possible! Manage your **Budget ($)** and **Reputation (%)**.
 - 🟢 **Web Traffic (Green):** Needs to be stored in **S3**.
 - 🟠 **API Traffic (Orange):** Needs to be processed and saved to a **Database**.
 - 🟣 **Fraud/DDoS (Pink):** Must be blocked by a **WAF**.
+- 🔵 **Login Traffic (Cyan):** Authenticate via **Auth Service** then **Database**.
+- 🌸 **Inference Traffic (Pink):** AI Prompts. Route to **GPU Node** then **Vector DB**.
+- 🟡 **History Traffic (Yellow):** Chat History. Route to **Auth Service** then **Database**.
 
 ### Infrastructure & Services
 Build your architecture using the toolbar. Each service has a cost and upkeep:
@@ -29,10 +32,16 @@ Build your architecture using the toolbar. Each service has a cost and upkeep:
 | **ElastiCache** | $75 | Medium | **Redis Cache.** Caches responses to reduce DB load. |
 | **Database** | $180 | Very High | **RDS.** Destination for API traffic. **Upgradeable (Tiers 1-3).** |
 | **S3** | $30 | Low | **Storage.** Destination for Web traffic. |
+| **Auth** | $60 | Medium | **Authentication.** Handles Login & History requests. |
+| **GPU Node** | $250 | Very High | **AI Inference.** Processes heavy AI models. |
+| **Vector DB** | $150 | High | **RAG Memory.** Stores embeddings for AI context. |
 
 ### Scoring & Economy
 - **Web Request:** +$0.80 / +5 Score
 - **API Request:** +$1.20 / +8 Score
+- **Login Request:** +$1.50 / +10 Score
+- **Inference Request:** +$3.00 / +20 Score
+- **History Request:** +$1.00 / +6 Score
 - **Fraud Blocked:** +10 Score
 - **Fraud Leak:** -8 Reputation
 - **Upkeep Scaling:** Costs increase 1x to 2x over 10 minutes.
