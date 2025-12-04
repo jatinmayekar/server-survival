@@ -50,6 +50,14 @@ class Service {
                 geo = new THREE.BoxGeometry(2.5, 1.5, 2.5);
                 mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.cache, ...materialProps });
                 break;
+            case 'cdn':
+                geo = new THREE.TorusGeometry(1.2, 0.4, 16, 32);
+                mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.cdn, ...materialProps });
+                break;
+            case 'stream':
+                geo = new THREE.BoxGeometry(4, 0.5, 1);
+                mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.stream, ...materialProps });
+                break;
             case 'sqs':
                 geo = new THREE.BoxGeometry(4, 0.8, 2);
                 mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.sqs, ...materialProps });
@@ -237,6 +245,39 @@ class Service {
                             // Let's require Vector DB for "Proper" AI architecture
                             failRequest(job.req);
                         }
+                    } else {
+                        failRequest(job.req);
+                    }
+                    continue;
+                }
+
+                // --- CDN (CloudFront) ---
+                if (this.type === 'cdn') {
+                    if (job.req.type === TRAFFIC_TYPES.WEB) {
+                        // 80% Cache Hit Rate (Finish immediately)
+                        if (Math.random() < 0.8) {
+                            finishRequest(job.req);
+                        } else {
+                            // 20% Cache Miss (Route to S3)
+                            const s3Target = STATE.services.find(s => this.connections.includes(s.id) && s.type === 's3');
+                            if (s3Target) job.req.flyTo(s3Target);
+                            else failRequest(job.req); // 504 Gateway Timeout
+                        }
+                    } else {
+                        failRequest(job.req);
+                    }
+                    continue;
+                }
+
+                // --- STREAM (Kinesis) ---
+                if (this.type === 'stream') {
+                    // Stream routes to Cache, DB, or VectorDB
+                    const targets = STATE.services.filter(s => this.connections.includes(s.id) && ['cache', 'db', 'vector_db'].includes(s.type));
+
+                    if (targets.length > 0) {
+                        // Load balance or random
+                        const target = targets[Math.floor(Math.random() * targets.length)];
+                        job.req.flyTo(target);
                     } else {
                         failRequest(job.req);
                     }

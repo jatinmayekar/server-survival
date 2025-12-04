@@ -27,12 +27,32 @@ const CONFIG = {
         sqs: 0xFF9900,  // AWS orange
         auth: 0x6366f1, // Indigo
         gpu: 0x10b981, // Emerald (NVIDIA-ish)
-        vector_db: 0x06b6d4 // Cyan
+        vector_db: 0x06b6d4, // Cyan
+        cdn: 0x8b5cf6, // Violet (CloudFront)
+        stream: 0xf59e0b // Amber (Kinesis)
     },
     internetNodeStartPos: { x: -40, y: 0, z: 0 },
     services: {
-        waf: { name: "WAF Firewall", cost: 40, type: 'waf', processingTime: 20, capacity: 100, upkeep: 6 },
-        alb: { name: "Load Balancer", cost: 50, type: 'alb', processingTime: 50, capacity: 50, upkeep: 10 },
+        waf: {
+            name: "WAF Firewall", cost: 40, type: 'waf', processingTime: 20, capacity: 100, upkeep: 6,
+            provider: 'AWS',
+            description: "Web Application Firewall.",
+            instances: [
+                { id: 'waf.standard', name: 'AWS WAF', cost: 40, capacity: 100, upkeep: 6, processingTime: 20, desc: "Standard Protection" },
+                { id: 'shield.std', name: 'AWS Shield', cost: 100, capacity: 300, upkeep: 15, processingTime: 10, desc: "DDoS Protection" },
+                { id: 'shield.adv', name: 'Shield Advanced', cost: 300, capacity: 1000, upkeep: 50, processingTime: 5, desc: "Enterprise Security" }
+            ]
+        },
+        alb: {
+            name: "Load Balancer", cost: 50, type: 'alb', processingTime: 50, capacity: 50, upkeep: 10,
+            provider: 'AWS',
+            description: "Elastic Load Balancing.",
+            instances: [
+                { id: 'alb.app', name: 'ALB', cost: 50, capacity: 50, upkeep: 10, processingTime: 50, desc: "Application Layer 7" },
+                { id: 'nlb.net', name: 'NLB', cost: 120, capacity: 200, upkeep: 25, processingTime: 10, desc: "Network Layer 4 (Fast)" },
+                { id: 'glb.gateway', name: 'GWLB', cost: 250, capacity: 500, upkeep: 40, processingTime: 5, desc: "Gateway Load Balancer" }
+            ]
+        },
         auth: { name: "Auth Service", cost: 60, type: 'auth', processingTime: 100, capacity: 20, upkeep: 12 },
         compute: {
             name: "EC2 Compute", cost: 80, type: 'compute', processingTime: 600, capacity: 4, upkeep: 18,
@@ -94,7 +114,34 @@ const CONFIG = {
                 { level: 3, capacity: 100, cost: 400, name: 'Amazon Kendra' }
             ]
         },
-        s3: { name: "S3 Storage", cost: 30, type: 's3', processingTime: 200, capacity: 100, upkeep: 8 },
+        s3: {
+            name: "S3 Storage", cost: 30, type: 's3', processingTime: 200, capacity: 100, upkeep: 8,
+            provider: 'AWS',
+            description: "Object Storage.",
+            instances: [
+                { id: 's3.std', name: 'S3 Standard', cost: 30, capacity: 100, upkeep: 8, processingTime: 200, desc: "General Purpose" },
+                { id: 's3.express', name: 'S3 Express', cost: 150, capacity: 500, upkeep: 30, processingTime: 50, desc: "Single Zone High Perf" },
+                { id: 's3.glacier', name: 'S3 Glacier', cost: 10, capacity: 50, upkeep: 2, processingTime: 800, desc: "Archive (Slow/Cheap)" }
+            ]
+        },
+        cdn: {
+            name: "CloudFront", cost: 90, type: 'cdn', processingTime: 30, capacity: 200, upkeep: 15,
+            provider: 'AWS',
+            description: "Content Delivery Network.",
+            instances: [
+                { id: 'cf.std', name: 'CloudFront Std', cost: 90, capacity: 200, upkeep: 15, processingTime: 30, desc: "Edge Caching" },
+                { id: 'cf.sec', name: 'CloudFront Sec', cost: 180, capacity: 150, upkeep: 30, processingTime: 40, desc: "Security Headers + WAF" }
+            ]
+        },
+        stream: {
+            name: "Kinesis", cost: 120, type: 'stream', processingTime: 10, capacity: 500, upkeep: 20,
+            provider: 'AWS',
+            description: "Real-time Data Streaming.",
+            instances: [
+                { id: 'kinesis.prov', name: 'Kinesis Prov', cost: 120, capacity: 500, upkeep: 20, processingTime: 10, desc: "Provisioned Shards" },
+                { id: 'kinesis.fire', name: 'Firehose', cost: 80, capacity: 1000, upkeep: 10, processingTime: 100, desc: "Batch Delivery" }
+            ]
+        },
         cache: {
             name: "ElastiCache",
             cost: 75,
@@ -123,7 +170,13 @@ const CONFIG = {
             processingTime: 100,
             capacity: 10,
             maxQueueSize: 200,
-            upkeep: 3
+            upkeep: 3,
+            provider: 'AWS',
+            description: "Message Queuing.",
+            instances: [
+                { id: 'sqs.std', name: 'SQS Standard', cost: 40, capacity: 10, maxQueueSize: 200, upkeep: 3, processingTime: 100, desc: "Best Effort Order" },
+                { id: 'sqs.fifo', name: 'SQS FIFO', cost: 80, capacity: 5, maxQueueSize: 100, upkeep: 8, processingTime: 150, desc: "Strict Ordering" }
+            ]
         }
     },
     survival: {

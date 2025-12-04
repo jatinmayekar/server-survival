@@ -394,10 +394,9 @@
                 <!-- WAF -->
                 <button id="tool-waf"
                     class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-                    onclick="setTool('waf')">
-                    <div
-                        class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-                        $40</div>
+                    onclick="openCatalog('waf')">
+                    <div class="absolute top-0 right-0 bg-gray-700 text-gray-300 text-[9px] px-1 rounded-bl font-mono">
+                        AWS</div>
                     <div class="w-4 h-4 bg-purple-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(168,85,247,0.6)]"></div>
                     <span class="text-[10px] font-bold mt-1">WAF</span>
                     <span class="text-[8px] text-gray-400">Sec</span>
@@ -406,10 +405,9 @@
                 <!-- SQS -->
                 <button id="tool-sqs"
                     class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-                    onclick="setTool('sqs')">
-                    <div
-                        class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-                        $40</div>
+                    onclick="openCatalog('sqs')">
+                    <div class="absolute top-0 right-0 bg-gray-700 text-gray-300 text-[9px] px-1 rounded-bl font-mono">
+                        AWS</div>
                     <div class="w-5 h-3 bg-orange-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(255,153,0,0.6)]"></div>
                     <span class="text-[10px] font-bold mt-1">SQS</span>
                     <span class="text-[8px] text-gray-400">Queue</span>
@@ -417,10 +415,9 @@
 
                 <button id="tool-alb"
                     class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-                    onclick="setTool('alb')">
-                    <div
-                        class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-                        $50</div>
+                    onclick="openCatalog('alb')">
+                    <div class="absolute top-0 right-0 bg-gray-700 text-gray-300 text-[9px] px-1 rounded-bl font-mono">
+                        AWS</div>
                     <div class="w-4 h-4 bg-blue-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
                     <span class="text-[10px] font-bold mt-1">ALB</span>
                     <span class="text-[8px] text-gray-400">Load</span>
@@ -468,13 +465,36 @@
                 <!-- S3 -->
                 <button id="tool-s3"
                     class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-                    onclick="setTool('s3')">
-                    <div
-                        class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-                        $30</div>
-                    <div class="w-4 h-4 bg-emerald-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
+                    onclick="openCatalog('s3')">
+                    <div class="absolute top-0 right-0 bg-gray-700 text-gray-300 text-[9px] px-1 rounded-bl font-mono">
+                        AWS</div>
+                    <div class="w-4 h-4 bg-green-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
                     <span class="text-[10px] font-bold mt-1">S3</span>
-                    <span class="text-[8px] text-gray-400">Store</span>
+                    <span class="text-[8px] text-gray-400">Storage</span>
+                </button>
+
+                <!-- CDN -->
+                <button id="tool-cdn"
+                    class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+                    onclick="openCatalog('cdn')">
+                    <div class="absolute top-0 right-0 bg-gray-700 text-gray-300 text-[9px] px-1 rounded-bl font-mono">
+                        AWS</div>
+                    <div
+                        class="w-4 h-4 bg-violet-500 rounded-full mb-1 shadow-[0_0_10px_rgba(139,92,246,0.6)] border-2 border-violet-300">
+                    </div>
+                    <span class="text-[10px] font-bold mt-1">CDN</span>
+                    <span class="text-[8px] text-gray-400">Edge</span>
+                </button>
+
+                <!-- Stream -->
+                <button id="tool-stream"
+                    class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+                    onclick="openCatalog('stream')">
+                    <div class="absolute top-0 right-0 bg-gray-700 text-gray-300 text-[9px] px-1 rounded-bl font-mono">
+                        AWS</div>
+                    <div class="w-5 h-2 bg-amber-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(245,158,11,0.6)]"></div>
+                    <span class="text-[10px] font-bold mt-1">Stream</span>
+                    <span class="text-[8px] text-gray-400">Kinesis</span>
                 </button>
 
                 <!-- Auth Service -->

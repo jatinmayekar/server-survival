@@ -536,6 +536,12 @@ function createConnection(fromId, toId) {
     else if (t1 === 'sqs' && t2 === 'compute') valid = true;
     else if (t1 === 'alb' && t2 === 'compute') valid = true;
     else if (t1 === 'alb' && t2 === 'auth') valid = true; // ALB -> Auth
+    else if (t1 === 'internet' && t2 === 'cdn') valid = true; // Internet -> CDN
+    else if (t1 === 'cdn' && t2 === 's3') valid = true; // CDN -> S3
+    else if (t1 === 'internet' && t2 === 'stream') valid = true; // Internet -> Stream
+    else if (t1 === 'stream' && t2 === 'cache') valid = true; // Stream -> Cache
+    else if (t1 === 'stream' && t2 === 'db') valid = true; // Stream -> DB
+    else if (t1 === 'stream' && t2 === 'vector_db') valid = true; // Stream -> VectorDB
     else if (t1 === 'auth' && t2 === 'db') valid = true; // Auth -> DB (Login)
     else if (t1 === 'auth' && t2 === 'compute') valid = true; // Auth -> Compute (Inference/History)
     else if (t1 === 'compute' && t2 === 'cache') valid = true;
