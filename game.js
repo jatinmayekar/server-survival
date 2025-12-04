@@ -187,7 +187,7 @@ const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let isPanning = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
-const panSpeed = 0.1;
+const panSpeed = 0.5;
 
 function resetGame(mode = 'survival') {
     STATE.sound.init();
@@ -497,10 +497,18 @@ window.startSandbox = () => {
 };
 
 function createService(type, pos) {
-    if (STATE.money < CONFIG.services[type].cost) { flashMoney(); return; }
+    let config = CONFIG.services[type];
+    let configOverride = null;
+
+    if (STATE.selectedInstance && STATE.selectedInstance.type === type) {
+        config = { ...config, ...STATE.selectedInstance };
+        configOverride = STATE.selectedInstance;
+    }
+
+    if (STATE.money < config.cost) { flashMoney(); return; }
     if (STATE.services.find(s => s.position.distanceTo(pos) < 1)) return;
-    STATE.money -= CONFIG.services[type].cost;
-    STATE.services.push(new Service(type, pos));
+    STATE.money -= config.cost;
+    STATE.services.push(new Service(type, pos, configOverride));
     STATE.sound.playPlace();
 }
 
@@ -644,6 +652,9 @@ function calculateFailChanceBasedOnLoad(load) {
 }
 
 window.setTool = (t) => {
+    if (STATE.selectedInstance && STATE.selectedInstance.type !== t) {
+        STATE.selectedInstance = null;
+    }
     STATE.activeTool = t; STATE.selectedNodeId = null;
     document.querySelectorAll('.service-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`tool-${t}`).classList.add('active');
@@ -976,6 +987,10 @@ function updateConnectionsForNode(nodeId) {
 function animate(time) {
     STATE.animationId = requestAnimationFrame(animate);
     if (!STATE.isRunning) return;
+
+    if (STATE.gameMode === 'scenario') {
+        updateScenario();
+    }
 
     const dt = ((time - STATE.lastTime) / 1000) * STATE.timeScale;
     STATE.lastTime = time;
@@ -1419,3 +1434,244 @@ function restoreConnections(savedConnections, internetConnections) {
         createConnection(connData.from, connData.to);
     });
 }
+
+window.takeScreenshot = () => {
+    const canvas = document.querySelector('canvas');
+    // Render once to ensure fresh frame
+    renderer.render(scene, camera);
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `server-survival-${Date.now()}.png`;
+    a.click();
+
+    // Feedback
+    const btn = document.getElementById('btn-screenshot');
+    if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '📸 Saved!';
+        setTimeout(() => btn.innerHTML = originalText, 2000);
+    }
+};
+
+window.recordGameplay = () => {
+    const canvas = document.querySelector('canvas');
+    const stream = canvas.captureStream(30);
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    const chunks = [];
+
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `server-survival-clip-${Date.now()}.webm`;
+        a.click();
+
+        // Feedback
+        const btn = document.getElementById('btn-record');
+        if (btn) {
+            btn.innerHTML = '🎥 Record (5s)';
+            btn.classList.remove('text-red-500', 'animate-pulse');
+        }
+    };
+
+    recorder.start();
+
+    // Feedback
+    const btn = document.getElementById('btn-record');
+    if (btn) {
+        btn.innerHTML = '🔴 Recording...';
+        btn.classList.add('text-red-500', 'animate-pulse');
+    }
+
+    setTimeout(() => recorder.stop(), 5000);
+};
+
+// ==================== CATALOG FUNCTIONS ====================
+
+window.openCatalog = (type) => {
+    const serviceConfig = CONFIG.services[type];
+    if (!serviceConfig || !serviceConfig.instances) {
+        setTool(type);
+        return;
+    }
+
+    const modal = document.getElementById('catalog-modal');
+    const title = document.getElementById('catalog-title');
+    const content = document.getElementById('catalog-content');
+
+    title.innerText = `${serviceConfig.name} Catalog`;
+    content.innerHTML = '';
+
+    serviceConfig.instances.forEach(inst => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-blue-500 transition cursor-pointer group relative overflow-hidden';
+        card.onclick = () => selectInstance(type, inst.id);
+
+        const isSelected = STATE.selectedInstance && STATE.selectedInstance.id === inst.id;
+        if (isSelected) card.classList.add('border-blue-500', 'ring-2', 'ring-blue-500/50');
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-white text-lg">${inst.name}</h3>
+                <span class="text-xs font-mono bg-gray-700 px-2 py-1 rounded text-gray-300">$${inst.cost}</span>
+            </div>
+            <p class="text-xs text-gray-400 mb-3 h-8">${inst.desc || ''}</p>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div class="bg-gray-900/50 p-1.5 rounded">
+                    <span class="text-gray-500 block">Capacity</span>
+                    <span class="text-white">${inst.capacity} reqs</span>
+                </div>
+                <div class="bg-gray-900/50 p-1.5 rounded">
+                    <span class="text-gray-500 block">Speed</span>
+                    <span class="text-white">${inst.processingTime}ms</span>
+                </div>
+                <div class="bg-gray-900/50 p-1.5 rounded">
+                    <span class="text-gray-500 block">Upkeep</span>
+                    <span class="text-red-400">-$${inst.upkeep}/s</span>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        `;
+        content.appendChild(card);
+    });
+
+    modal.classList.remove('hidden');
+};
+
+window.closeCatalog = () => {
+    document.getElementById('catalog-modal').classList.add('hidden');
+};
+
+window.selectInstance = (type, instanceId) => {
+    const serviceConfig = CONFIG.services[type];
+    const instance = serviceConfig.instances.find(i => i.id === instanceId);
+
+    if (instance) {
+        STATE.selectedInstance = { ...instance, type: type };
+        setTool(type);
+        closeCatalog();
+    }
+};
+
+// ==================== SCENARIO ENGINE ====================
+
+let currentScenario = null;
+let scenarioStartTime = 0;
+
+window.loadScenario = (id) => {
+    let scenario;
+    if (id === 'random') {
+        scenario = generateRandomScenario();
+    } else {
+        scenario = SCENARIOS[id];
+    }
+
+    if (!scenario) return;
+
+    startScenario(scenario);
+};
+
+function startScenario(scenario) {
+    currentScenario = scenario;
+    scenarioStartTime = performance.now();
+
+    // Reset game state
+    resetGame('scenario');
+    STATE.gameMode = 'scenario';
+    STATE.money = scenario.initialState.money || 1000;
+    STATE.currentRPS = scenario.initialState.rps || 1;
+    if (scenario.initialState.trafficDistribution) {
+        STATE.trafficDistribution = { ...STATE.trafficDistribution, ...scenario.initialState.trafficDistribution };
+    }
+
+    // Show intro modal
+    alert(`SCENARIO: ${scenario.name}\n\n${scenario.description}\n\nObjective: Survive ${scenario.objectives.survive_seconds} seconds.`);
+
+    // Hide menus
+    document.getElementById('main-menu-modal').classList.add('hidden');
+    document.getElementById('scenarios-modal').classList.add('hidden');
+
+    setTimeScale(1);
+}
+
+window.updateScenario = () => {
+    if (!currentScenario) return;
+
+    const elapsed = (performance.now() - scenarioStartTime) / 1000;
+
+    // Check events
+    currentScenario.events.forEach(event => {
+        if (!event.triggered && elapsed >= event.time) {
+            triggerScenarioEvent(event);
+            event.triggered = true;
+        }
+    });
+
+    // Check objectives
+    if (elapsed >= currentScenario.objectives.survive_seconds) {
+        endScenario(true);
+    }
+
+    if (currentScenario.objectives.min_reputation && STATE.reputation < currentScenario.objectives.min_reputation) {
+        endScenario(false);
+    }
+};
+
+function triggerScenarioEvent(event) {
+    if (event.message) {
+        // Show toast
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg font-bold z-50 animate-bounce';
+        toast.innerText = event.message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+    }
+
+    if (event.type === 'SERVICE_FAILURE') {
+        // Disable services of type
+        STATE.services.forEach(s => {
+            if (s.type === event.targetType) {
+                s.disabled = true;
+                setTimeout(() => s.disabled = false, event.duration * 1000);
+            }
+        });
+    } else if (event.type === 'TRAFFIC_SPIKE') {
+        // Spawn burst
+        const amount = event.amount || 20;
+        const type = event.trafficType || 'WEB';
+        for (let i = 0; i < amount; i++) {
+            setTimeout(() => {
+                const req = new Request(type);
+                STATE.requests.push(req);
+                const conns = STATE.internetNode.connections;
+                if (conns.length > 0) {
+                    const entryNodes = conns.map(id => STATE.services.find(s => s.id === id));
+                    const wafEntry = entryNodes.find(s => s?.type === 'waf');
+                    const target = wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
+                    if (target) req.flyTo(target); else failRequest(req);
+                } else {
+                    failRequest(req);
+                }
+            }, i * 50);
+        }
+    }
+}
+
+function endScenario(success) {
+    currentScenario = null;
+    alert(success ? "VICTORY! Scenario Completed." : "DEFEAT! Reputation too low.");
+    openMainMenu();
+}
+
+window.showScenarios = () => {
+    document.getElementById('main-menu-modal').classList.add('hidden');
+    document.getElementById('scenarios-modal').classList.remove('hidden');
+};
+
+window.closeScenarios = () => {
+    document.getElementById('scenarios-modal').classList.add('hidden');
+    document.getElementById('main-menu-modal').classList.remove('hidden');
+};

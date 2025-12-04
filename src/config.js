@@ -36,34 +36,62 @@ const CONFIG = {
         auth: { name: "Auth Service", cost: 60, type: 'auth', processingTime: 100, capacity: 20, upkeep: 12 },
         compute: {
             name: "EC2 Compute", cost: 80, type: 'compute', processingTime: 600, capacity: 4, upkeep: 18,
-            tiers: [
-                { level: 1, capacity: 4, cost: 0 },
-                { level: 2, capacity: 10, cost: 120 },
-                { level: 3, capacity: 18, cost: 180 }
+            provider: 'AWS',
+            description: "General purpose compute capacity.",
+            instances: [
+                { id: 't3.micro', name: 't3.micro', cost: 80, capacity: 4, upkeep: 5, processingTime: 600, desc: "Burstable, low cost" },
+                { id: 'm5.large', name: 'm5.large', cost: 200, capacity: 15, upkeep: 25, processingTime: 400, desc: "General Purpose" },
+                { id: 'c6g.xlarge', name: 'c6g.xlarge', cost: 450, capacity: 40, upkeep: 60, processingTime: 200, desc: "Compute Optimized ARM" }
+            ],
+            tiers: [ // Kept for backward compatibility with simple upgrade logic
+                { level: 1, capacity: 4, cost: 0, name: 't3.micro' },
+                { level: 2, capacity: 15, cost: 120, name: 'm5.large' },
+                { level: 3, capacity: 40, cost: 250, name: 'c6g.xlarge' }
             ]
         },
         gpu: {
             name: "GPU Node", cost: 250, type: 'gpu', processingTime: 1200, capacity: 2, upkeep: 45,
+            provider: 'AWS',
+            description: "Accelerated computing for ML.",
+            instances: [
+                { id: 'g4dn.xlarge', name: 'g4dn.xlarge', cost: 250, capacity: 2, upkeep: 45, processingTime: 1200, desc: "T4 Tensor Core" },
+                { id: 'p3.2xlarge', name: 'p3.2xlarge', cost: 600, capacity: 6, upkeep: 120, processingTime: 600, desc: "V100 High Performance" },
+                { id: 'p4d.24xlarge', name: 'p4d.24xlarge', cost: 1500, capacity: 20, upkeep: 400, processingTime: 200, desc: "A100 Ultra Cluster" }
+            ],
             tiers: [
-                { level: 1, capacity: 2, cost: 0 },
-                { level: 2, capacity: 5, cost: 400 },
-                { level: 3, capacity: 10, cost: 800 }
+                { level: 1, capacity: 2, cost: 0, name: 'g4dn.xlarge' },
+                { level: 2, capacity: 6, cost: 350, name: 'p3.2xlarge' },
+                { level: 3, capacity: 20, cost: 900, name: 'p4d.24xlarge' }
             ]
         },
         db: {
             name: "RDS Database", cost: 180, type: 'db', processingTime: 300, capacity: 8, upkeep: 36,
+            provider: 'AWS',
+            description: "Relational Database Service.",
+            instances: [
+                { id: 'db.t3.micro', name: 'db.t3.micro', cost: 180, capacity: 8, upkeep: 15, processingTime: 300, desc: "Dev/Test" },
+                { id: 'db.m5.large', name: 'db.m5.large', cost: 400, capacity: 25, upkeep: 50, processingTime: 150, desc: "Production General" },
+                { id: 'aurora-serverless', name: 'Aurora v2', cost: 800, capacity: 60, upkeep: 100, processingTime: 80, desc: "Auto-scaling Serverless" }
+            ],
             tiers: [
-                { level: 1, capacity: 8, cost: 0 },
-                { level: 2, capacity: 20, cost: 250 },
-                { level: 3, capacity: 35, cost: 400 }
+                { level: 1, capacity: 8, cost: 0, name: 'db.t3.micro' },
+                { level: 2, capacity: 25, cost: 220, name: 'db.m5.large' },
+                { level: 3, capacity: 60, cost: 400, name: 'Aurora v2' }
             ]
         },
         vector_db: {
             name: "Vector DB", cost: 150, type: 'vector_db', processingTime: 400, capacity: 15, upkeep: 25,
+            provider: 'AWS',
+            description: "Vector search for RAG.",
+            instances: [
+                { id: 'opensearch.small', name: 'OpenSearch Small', cost: 150, capacity: 15, upkeep: 25, processingTime: 400, desc: "Basic Indexing" },
+                { id: 'opensearch.large', name: 'OpenSearch Large', cost: 400, capacity: 50, upkeep: 80, processingTime: 200, desc: "High Throughput" },
+                { id: 'kendra', name: 'Amazon Kendra', cost: 800, capacity: 100, upkeep: 200, processingTime: 100, desc: "Intelligent Search" }
+            ],
             tiers: [
-                { level: 1, capacity: 15, cost: 0 },
-                { level: 2, capacity: 40, cost: 300 },
-                { level: 3, capacity: 80, cost: 500 }
+                { level: 1, capacity: 15, cost: 0, name: 'OpenSearch Small' },
+                { level: 2, capacity: 50, cost: 250, name: 'OpenSearch Large' },
+                { level: 3, capacity: 100, cost: 400, name: 'Amazon Kendra' }
             ]
         },
         s3: { name: "S3 Storage", cost: 30, type: 's3', processingTime: 200, capacity: 100, upkeep: 8 },
@@ -75,10 +103,17 @@ const CONFIG = {
             capacity: 30,
             upkeep: 10,
             cacheHitRate: 0.35,
+            provider: 'AWS',
+            description: "In-memory caching.",
+            instances: [
+                { id: 'cache.t3.micro', name: 'cache.t3.micro', cost: 75, capacity: 30, upkeep: 10, cacheHitRate: 0.35, desc: "Redis Micro" },
+                { id: 'cache.m5.large', name: 'cache.m5.large', cost: 200, capacity: 60, upkeep: 40, cacheHitRate: 0.60, desc: "Redis Large" },
+                { id: 'cache.r6g.xlarge', name: 'cache.r6g.xlarge', cost: 400, capacity: 120, upkeep: 90, cacheHitRate: 0.85, desc: "Memory Optimized" }
+            ],
             tiers: [
-                { level: 1, capacity: 30, cacheHitRate: 0.35, cost: 0 },
-                { level: 2, capacity: 50, cacheHitRate: 0.50, cost: 150 },
-                { level: 3, capacity: 80, cacheHitRate: 0.65, cost: 200 }
+                { level: 1, capacity: 30, cacheHitRate: 0.35, cost: 0, name: 'cache.t3.micro' },
+                { level: 2, capacity: 60, cacheHitRate: 0.60, cost: 125, name: 'cache.m5.large' },
+                { level: 3, capacity: 120, cacheHitRate: 0.85, cost: 200, name: 'cache.r6g.xlarge' }
             ]
         },
         sqs: {

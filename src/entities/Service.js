@@ -1,12 +1,14 @@
 class Service {
-    constructor(type, pos) {
+    constructor(type, pos, configOverride = null) {
         this.id = 'svc_' + Math.random().toString(36).substr(2, 9);
         this.type = type;
-        this.config = CONFIG.services[type];
+        this.config = configOverride ? { ...CONFIG.services[type], ...configOverride } : CONFIG.services[type];
         this.position = pos.clone();
         this.queue = [];
         this.processing = [];
         this.connections = [];
+        this.disabled = false;
+        this.originalColor = null;
 
         let geo, mat;
         const materialProps = { roughness: 0.2 };
