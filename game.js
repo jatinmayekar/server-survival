@@ -1681,3 +1681,109 @@ window.closeScenarios = () => {
     document.getElementById('scenarios-modal').classList.add('hidden');
     document.getElementById('main-menu-modal').classList.remove('hidden');
 };
+
+// --- Terraform IaC Logic ---
+
+window.openTerraformModal = () => {
+    document.getElementById('main-menu-modal').classList.add('hidden');
+    document.getElementById('terraform-modal').classList.remove('hidden');
+};
+
+window.closeTerraformModal = () => {
+    document.getElementById('terraform-modal').classList.add('hidden');
+    document.getElementById('main-menu-modal').classList.remove('hidden');
+};
+
+window.deployTerraform = () => {
+    const code = document.getElementById('terraform-code').value;
+    if (!code.trim()) {
+        alert("Please enter some Terraform code!");
+        return;
+    }
+
+    const result = TerraformParser.parse(code);
+    if (result.resources.length === 0) {
+        alert("No supported resources found in the code.");
+        return;
+    }
+
+    // Reset Game to Sandbox Mode
+    resetGame('sandbox');
+    document.getElementById('terraform-modal').classList.add('hidden');
+    document.getElementById('main-menu-modal').classList.add('hidden');
+
+    // Auto-Layout Grid
+    let x = -40;
+    let z = -20;
+    const spacing = 10;
+    const rowLimit = 5;
+    let count = 0;
+
+    const resourceToIdMap = {}; // Map Terraform ID (type.name) -> Game Service ID
+
+    // 1. Create Services
+    result.resources.forEach(res => {
+        const pos = new THREE.Vector3(x, 0, z);
+
+        // Map attributes to configOverride
+        const configOverride = {};
+
+        // Name mapping
+        if (res.attributes.bucket) configOverride.name = res.attributes.bucket;
+        else if (res.attributes.name) configOverride.name = res.attributes.name;
+        else configOverride.name = res.terraformName; // Fallback to TF resource name
+
+        // Tier/Capacity mapping (Simple heuristics)
+        if (res.attributes.instance_type) {
+            if (res.attributes.instance_type.includes('large')) {
+                configOverride.capacity = 300; // Tier 2 approx
+                configOverride.tier = 2;
+            } else if (res.attributes.instance_type.includes('xlarge')) {
+                configOverride.capacity = 500; // Tier 3 approx
+                configOverride.tier = 3;
+            }
+        }
+
+        // Bypass money checks for IaC deployment (Sandbox feature)
+        const service = new Service(res.type, pos, configOverride);
+        STATE.services.push(service);
+        STATE.sound.playPlace();
+
+        resourceToIdMap[res.id] = service.id;
+
+        // Grid Layout
+        x += spacing;
+        count++;
+        if (count % rowLimit === 0) {
+            x = -40;
+            z += spacing;
+        }
+    });
+
+    // 2. Create Connections
+    result.connections.forEach(conn => {
+        const fromId = resourceToIdMap[conn.from];
+        const toId = resourceToIdMap[conn.to];
+
+        if (fromId && toId) {
+            createConnection(fromId, toId);
+        }
+    });
+
+    // 3. Connect Internet to Entry Point
+    // Priority: WAF > CDN > ALB > Compute > S3
+    const entryPoint = STATE.services.find(s => s.type === 'waf') ||
+        STATE.services.find(s => s.type === 'cdn') ||
+        STATE.services.find(s => s.type === 'alb') ||
+        STATE.services.find(s => s.type === 'compute') ||
+        STATE.services.find(s => s.type === 's3');
+
+    if (entryPoint) {
+        createConnection('internet', entryPoint.id);
+    }
+
+    // 4. Start Simulation
+    setTimeScale(1);
+
+    alert(`Deployed ${result.resources.length} resources from Terraform! Simulation Started.`);
+};

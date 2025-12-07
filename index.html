@@ -599,6 +599,11 @@
                     Real-World Scenarios
                 </button>
 
+                <button onclick="openTerraformModal()"
+                    class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-pink-400/50">
+                    Infrastructure as Code (Terraform)
+                </button>
+
                 <button onclick="loadGameState()" id="load-btn"
                     class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
                     Continue Game
@@ -861,6 +866,90 @@
     <script src="src/entities/Request.js"></script>
     <script src="src/entities/Service.js"></script>
     <script src="src/services/SoundService.js"></script>
+
+    <!-- Terraform Modal -->
+    <div id="terraform-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 hidden">
+        <div class="glass-panel p-6 rounded-2xl max-w-5xl w-full h-[80vh] border border-gray-700 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-white tracking-wider flex items-center gap-2">
+                    <span class="text-purple-400">HCL</span> Infrastructure as Code
+                </h2>
+                <button onclick="closeTerraformModal()" class="text-gray-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex flex-1 gap-4 overflow-hidden">
+                <!-- Editor -->
+                <div class="flex-1 flex flex-col">
+                    <div
+                        class="bg-gray-900 rounded-t-lg p-2 border border-gray-700 border-b-0 flex justify-between items-center">
+                        <span class="text-xs text-gray-400 font-mono">main.tf</span>
+                        <span class="text-xs text-gray-500">Terraform v1.0</span>
+                    </div>
+                    <textarea id="terraform-code"
+                        class="flex-1 bg-gray-900 text-gray-300 font-mono text-sm p-4 border border-gray-700 rounded-b-lg focus:outline-none focus:border-blue-500 resize-none"
+                        spellcheck="false" placeholder="# Paste your Terraform code here..."></textarea>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="w-64 bg-gray-800/50 rounded-lg border border-gray-700 p-4 overflow-y-auto">
+                    <h3 class="text-sm font-bold text-gray-300 mb-3 uppercase">Supported Resources</h3>
+                    <div class="space-y-3 text-xs font-mono">
+                        <div>
+                            <div class="text-orange-400">aws_instance</div>
+                            <div class="text-gray-500">-> Compute Node</div>
+                        </div>
+                        <div>
+                            <div class="text-blue-400">aws_lb</div>
+                            <div class="text-gray-500">-> Load Balancer</div>
+                        </div>
+                        <div>
+                            <div class="text-red-400">aws_db_instance</div>
+                            <div class="text-gray-500">-> Database</div>
+                        </div>
+                        <div>
+                            <div class="text-green-400">aws_s3_bucket</div>
+                            <div class="text-gray-500">-> S3 Storage</div>
+                        </div>
+                        <div>
+                            <div class="text-purple-400">aws_wafv2_web_acl</div>
+                            <div class="text-gray-500">-> WAF Firewall</div>
+                        </div>
+                        <div>
+                            <div class="text-violet-400">aws_cloudfront_distribution</div>
+                            <div class="text-gray-500">-> CDN</div>
+                        </div>
+                        <div>
+                            <div class="text-amber-400">aws_kinesis_stream</div>
+                            <div class="text-gray-500">-> Stream</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="text-sm font-bold text-gray-300 mb-2 uppercase">Tips</h3>
+                        <ul class="text-xs text-gray-400 space-y-2 list-disc pl-3">
+                            <li>Unknown attributes are ignored.</li>
+                            <li>Implicit connections (e.g. <code>origin = aws_s3_bucket.id</code>) are auto-linked.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end gap-3">
+                <button onclick="closeTerraformModal()"
+                    class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:border-gray-800 transition">Cancel</button>
+                <button onclick="deployTerraform()"
+                    class="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-lg border border-purple-400/50 flex items-center gap-2">
+                    <span>🚀</span> Deploy Infrastructure
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scenarios Modal -->
     <div id="scenarios-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 hidden">
         <div class="glass-panel p-8 rounded-2xl max-w-2xl w-full border border-gray-700">
@@ -892,6 +981,7 @@
     </div>
 
     <script src="src/scenarios.js"></script>
+    <script src="src/utils/TerraformParser.js"></script>
     <script src="game.js"></script>
 </body>
 
